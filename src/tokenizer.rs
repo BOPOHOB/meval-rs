@@ -50,6 +50,7 @@ pub enum Operation {
     Rem,
     Pow,
     Fact,
+    Colon,
 }
 
 /// Expression tokens.
@@ -84,6 +85,7 @@ named!(
             | chain!(tag!("/"), || Token::Binary(Operation::Div))
             | chain!(tag!("%"), || Token::Binary(Operation::Rem))
             | chain!(tag!("^"), || Token::Binary(Operation::Pow))
+            | chain!(tag!(":"), || Token::Binary(Operation::Colon))
     )
 );
 
@@ -464,6 +466,21 @@ mod tests {
                 Number(12f64),
                 Binary(Minus),
                 Var("C_0".into()),
+            ])
+        );
+
+        assert_eq!(
+            tokenize("45:00/1:24*1.981"),
+            Ok(vec![
+                Number(45f64),
+                Binary(Colon),
+                Number(0f64),
+                Binary(Div),
+                Number(1f64),
+                Binary(Colon),
+                Number(24f64),
+                Binary(Times),
+                Number(1.981),
             ])
         );
 

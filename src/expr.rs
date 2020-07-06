@@ -66,6 +66,7 @@ impl Expr {
                         Div => left / right,
                         Rem => left % right,
                         Pow => left.powf(right),
+                        Colon => left * 60f64 + right,
                         _ => {
                             return Err(Error::EvalError(format!(
                                 "Unimplemented binary operation: {:?}",
@@ -1069,6 +1070,11 @@ mod tests {
         assert_eq!(eval_str("2 + 3"), Ok(5.));
         assert_eq!(eval_str("2 + (3 + 4)"), Ok(9.));
         assert_eq!(eval_str("-2^(4 - 3) * (3 + 4)"), Ok(-14.));
+        assert_eq!(eval_str("45:00*2.1/1:24"), Ok(67.5));
+        assert_eq!(eval_str("45:00*2.1/1:24"), Ok(67.5));
+        assert_eq!(eval_str("2:01:39.312"), Ok(7299.312));
+        assert_eq!(eval_str("2:01:00 -1:00"), Ok(7200f64));
+        assert_eq!(eval_str("floor(2:01:39 / 42.195)"), eval_str("2:52"));
         assert_eq!(eval_str("-2*3! + 1"), Ok(-11.));
         assert_eq!(eval_str("-171!"), Ok(std::f64::NEG_INFINITY));
         assert_eq!(eval_str("150!/148!"), Ok(22350.));

@@ -71,6 +71,7 @@ fn prec_assoc(token: &Token) -> (u32, Associativity) {
         Binary(op) => match op {
             Plus | Minus => (1, Left),
             Times | Div | Rem => (2, Left),
+            Colon => (3, Left),
             Pow => (4, Right),
             _ => unimplemented!(),
         },
