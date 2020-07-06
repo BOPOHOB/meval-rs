@@ -39,6 +39,83 @@ impl Expr {
         self.eval_with_context(builtin())
     }
 
+    pub fn get_type_seconds(&self) -> Result<i64, Error> {
+        use tokenizer::Operation::*;
+        use tokenizer::Token::*;
+
+        let mut stack: Vec<i64> = Vec::with_capacity(16);
+        for token in &self.rpn {
+            match *token {
+                Var(_) => stack.push(0),
+                Number(_) => stack.push(0),
+                Binary(op) => {
+                    let right = stack.pop().unwrap();
+                    let left = stack.pop().unwrap();
+                    stack.push(match op {
+                        Plus | Minus => {
+                            if right != left && left != 0 && right != 0 {
+                                return Err(Error::EvalError("Type check error".into()));
+                            }
+                            if right.abs() > left.abs() { right } else { left }
+                        },
+                        Times => {
+                            left + right
+                        },
+                        Div => {
+                            left - right
+                        },
+                        Rem => {
+                            if right != 0 {
+                                return Err(Error::EvalError("Type check error".into()));
+                            }
+                            left
+                        },
+                        Pow => {
+                            if right != 0 {
+                                return Err(Error::EvalError("Type check error".into()));
+                            }
+                            if left != 0 {
+                            }
+                            left
+                        },
+                        Colon => 1,
+                        _ => {
+                            return Err(Error::EvalError(format!(
+                                "Unimplemented binary operation: {:?}",
+                                op
+                            )));
+                        }
+                    });
+                },
+                Unary(_) => {},
+                Func(ref _n, Some(i)) => {
+                    if stack.len() < i {
+                        return Err(Error::EvalError(format!(
+                            "eval: stack does not have enough arguments for function token \
+                             {:?}",
+                            token
+                        )));
+                    }
+                    if i != 1 {
+                        let nl = stack.len() - i;
+                        stack.truncate(nl);
+                        stack.push(0);
+                    }
+                }
+                _ => return Err(Error::EvalError(format!("Unrecognized token: {:?}", token))),
+            }
+        }
+
+        let r = stack.pop().expect("Stack is empty, this is impossible.");
+        if !stack.is_empty() {
+            return Err(Error::EvalError(format!(
+                "There are still {} items on the stack.",
+                stack.len()
+            )));
+        }
+        Ok(r)
+    }
+
     /// Evaluates the expression with variables given by the argument.
     pub fn eval_with_context<C: ContextProvider>(&self, ctx: C) -> Result<f64, Error> {
         use tokenizer::Operation::*;
@@ -1099,6 +1176,16 @@ mod tests {
     #[test]
     fn test_builtins() {
         assert_eq!(eval_str("atan2(1.,2.)"), Ok((1f64).atan2(2.)));
+    }
+
+    #[test]
+    fn test_expressions_seconds_pow() {
+        assert_eq!(Expr::from_str("1".to_string().as_ref()).unwrap().get_type_seconds(), Ok(0));
+        assert_eq!(Expr::from_str("1:59:49".to_string().as_ref()).unwrap().get_type_seconds(), Ok(1));
+        assert_eq!(Expr::from_str("1:59:49/42.195".to_string().as_ref()).unwrap().get_type_seconds(), Ok(1));
+        assert_eq!(Expr::from_str("1:59:49/2:48".to_string().as_ref()).unwrap().get_type_seconds(), Ok(0));
+        assert_eq!(Expr::from_str("2 - floor(1:59:49*2:48)+12".to_string().as_ref()).unwrap().get_type_seconds(), Ok(2));
+        assert_eq!(Expr::from_str("2 - floor(1:59:49*2:48)*4^2+12".to_string().as_ref()).unwrap().get_type_seconds(), Ok(2));
     }
 
     #[test]
