@@ -38,15 +38,7 @@ impl fmt::Display for ParseError {
     }
 }
 
-impl std::error::Error for ParseError {
-    fn description(&self) -> &str {
-        match *self {
-            ParseError::UnexpectedToken(_) => "unexpected token",
-            ParseError::MissingRParen(_) => "missing right parenthesis",
-            ParseError::MissingArgument => "missing argument",
-        }
-    }
-}
+impl std::error::Error for ParseError { }
 
 /// Mathematical operations.
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -117,16 +109,16 @@ named!(comma<Token>, chain!(tag!(","), || Token::Comma));
 fn ident(input: &[u8]) -> IResult<&[u8], &[u8]> {
     use nom::Err::*;
     use nom::IResult::*;
-    use nom::{ErrorKind, Needed};
+    use nom::{ErrorKind};
 
-    // first character must be 'a'...'z' | 'A'...'Z' | '_'
+    // first character must be 'a'..='z' | 'A'..='Z' | '_'
     match input.first().cloned() {
-        Some(b'a'...b'z') | Some(b'A'...b'Z') | Some(b'_') => {
+        Some(b'a'..=b'z') | Some(b'A'..=b'Z') | Some(b'_') => {
             let n = input
                 .iter()
                 .skip(1)
                 .take_while(|&&c| match c {
-                    b'a'...b'z' | b'A'...b'Z' | b'_' | b'0'...b'9' => true,
+                    b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'0'..=b'9' => true,
                     _ => false,
                 })
                 .count();
@@ -145,7 +137,6 @@ named!(
     ))
 );
 
-/// Parse `func(`, returns `func`.
 named!(
     func<Token>,
     map!(
