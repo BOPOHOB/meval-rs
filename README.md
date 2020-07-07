@@ -54,7 +54,8 @@ pub fn sweet_eval<S: AsRef<str>>(expr: S) -> Result<String, Error> {
 }
 
 fn main() {
-    println!("The marathon pase time with pase 3:08 per kilometer is {}", sweet_eval("42.195 * 3:08").unwrap());
+    let pase = sweet_eval("42.195 * 3:08").unwrap();
+    println!("The marathon pase time with pase 3:08 per kilometer is {}", pase);
 
     let (result, degree) = eval_str("10000 * 2 / 1:17^2").unwrap();
     assert_eq!(degree, -2.0);
