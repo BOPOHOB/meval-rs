@@ -10,8 +10,42 @@ use extra_math::factorial;
 use shunting_yard::to_rpn;
 use std;
 use std::fmt;
-use tokenizer::{tokenize, Token};
+use tokenizer::{tokenize, Token, Operation};
 use Error;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum EvalError {
+    UnimplementedBinaryOperation(Operation),
+    UnimplementedUnaryOperation(Operation),
+    NotEnoughArgumentsForFunction(String, usize),
+    UnexpectedToken(Token),
+    ExcessTokens(Vec<(f64, f64)>),
+    FactorialError,
+}
+
+impl fmt::Display for EvalError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            EvalError::UnimplementedBinaryOperation(op) =>
+                write!(f, "Unimplemented binary operation: {:?}", op),
+            EvalError::UnimplementedUnaryOperation(op) =>
+                write!(f, "Unimplemented unary operation: {:?}", op),
+            EvalError::NotEnoughArgumentsForFunction(ref name, arguments_count) =>
+                write!(
+                    f,
+                    "eval: stack does not have enough arguments for function token {}({})",
+                    name,
+                    arguments_count
+                ),
+            EvalError::UnexpectedToken(token) =>
+                write!(f, "Unrecognized token: {:?}", token),
+            EvalError::ExcessTokens(tail) =>
+                write!(f, "There are still {} items on the stack.", tail.len()),
+            EvalError::FactorialError =>
+                write!(f, "Factorial computation error"),
+        }
+    }
+}
 
 /// Representation of a parsed expression.
 ///
@@ -38,169 +72,120 @@ impl Expr {
     pub fn eval(&self) -> Result<f64, Error> {
         self.eval_with_context(builtin())
     }
+    /// Evaluates the expression.
+    pub fn eval_with_unit(&self) -> Result<(f64, f64), Error> {
+        self.eval_with_context_and_unit(builtin())
+    }
 
-    pub fn get_type_seconds(&self) -> Result<i64, Error> {
-        use tokenizer::Operation::*;
-        use tokenizer::Token::*;
-
-        let mut stack: Vec<i64> = Vec::with_capacity(16);
-        for token in &self.rpn {
-            match *token {
-                Var(_) => stack.push(0),
-                Number(_) => stack.push(0),
-                Binary(op) => {
-                    let right = stack.pop().unwrap();
-                    let left = stack.pop().unwrap();
-                    stack.push(match op {
-                        Plus | Minus => {
-                            if right != left && left != 0 && right != 0 {
-                                return Err(Error::EvalError("Type check error".into()));
-                            }
-                            if right.abs() > left.abs() { right } else { left }
-                        },
-                        Times => {
-                            left + right
-                        },
-                        Div => {
-                            left - right
-                        },
-                        Rem => {
-                            if right != 0 {
-                                return Err(Error::EvalError("Type check error".into()));
-                            }
-                            left
-                        },
-                        Pow => {
-                            if right != 0 {
-                                return Err(Error::EvalError("Type check error".into()));
-                            }
-                            if left != 0 {
-                            }
-                            left
-                        },
-                        Colon => 1,
-                        _ => {
-                            return Err(Error::EvalError(format!(
-                                "Unimplemented binary operation: {:?}",
-                                op
-                            )));
-                        }
-                    });
-                },
-                Unary(_) => {},
-                Func(ref _n, Some(i)) => {
-                    if stack.len() < i {
-                        return Err(Error::EvalError(format!(
-                            "eval: stack does not have enough arguments for function token \
-                             {:?}",
-                            token
-                        )));
-                    }
-                    if i != 1 {
-                        let nl = stack.len() - i;
-                        stack.truncate(nl);
-                        stack.push(0);
-                    }
-                }
-                _ => return Err(Error::EvalError(format!("Unrecognized token: {:?}", token))),
-            }
-        }
-
-        let r = stack.pop().expect("Stack is empty, this is impossible.");
-        if !stack.is_empty() {
-            return Err(Error::EvalError(format!(
-                "There are still {} items on the stack.",
-                stack.len()
-            )));
-        }
-        Ok(r)
+    pub fn eval_with_context<C: ContextProvider>(&self, ctx: C) -> Result<f64, Error> {
+        Ok(self.eval_with_context_and_unit(ctx)?.0)
     }
 
     /// Evaluates the expression with variables given by the argument.
-    pub fn eval_with_context<C: ContextProvider>(&self, ctx: C) -> Result<f64, Error> {
+    pub fn eval_with_context_and_unit<C: ContextProvider>(&self, ctx: C) -> Result<(f64, f64), Error> {
         use tokenizer::Operation::*;
         use tokenizer::Token::*;
 
-        let mut stack = Vec::with_capacity(16);
+        let mut stack: Vec<(f64, f64)> = Vec::with_capacity(16);
 
         for token in &self.rpn {
             match *token {
                 Var(ref n) => {
                     if let Some(v) = ctx.get_var(n) {
-                        stack.push(v);
+                        stack.push((v, 0f64));
                     } else {
                         return Err(Error::UnknownVariable(n.clone()));
                     }
                 }
-                Number(f) => stack.push(f),
+                Number(f) => {
+                    stack.push((f, 0f64));
+                },
                 Binary(op) => {
-                    let right = stack.pop().unwrap();
-                    let left = stack.pop().unwrap();
-                    let r = match op {
-                        Plus => left + right,
-                        Minus => left - right,
-                        Times => left * right,
-                        Div => left / right,
-                        Rem => left % right,
-                        Pow => left.powf(right),
-                        Colon => left * 60f64 + right,
-                        _ => {
-                            return Err(Error::EvalError(format!(
-                                "Unimplemented binary operation: {:?}",
-                                op
-                            )));
-                        }
-                    };
-                    stack.push(r);
+                    let (right, right_time_unit) = stack.pop().unwrap();
+                    let (left, left_time_unit) = stack.pop().unwrap();
+                    stack.push(
+                        (
+                            match op {
+                                Plus => left + right,
+                                Minus => left - right,
+                                Times => left * right,
+                                Div => left / right,
+                                Rem => left % right,
+                                Pow => left.powf(right),
+                                Colon => left * 60f64 + right,
+                                _ => {
+                                    return Err(Error::EvalError(EvalError::UnimplementedBinaryOperation(op)));
+                                }
+                            },
+                            match op {
+                                Plus | Minus => {
+                                    if right_time_unit != left_time_unit && left_time_unit != 0f64 && right_time_unit != 0f64 {
+                                        0f64
+                                    } else if right_time_unit.abs() > left_time_unit.abs() {
+                                        right_time_unit
+                                    } else {
+                                        left_time_unit
+                                    }
+                                },
+                                Times => left_time_unit + right_time_unit,
+                                Div => left_time_unit - right_time_unit,
+                                Rem => if right_time_unit != 0f64 { 0f64 } else { left_time_unit },
+                                Pow => if right_time_unit != 0f64 { 0f64 } else { left_time_unit * right },
+                                Colon => 1f64,
+                                _ => {
+                                    return Err(Error::EvalError(EvalError::UnimplementedBinaryOperation(op)));
+                                }
+                            }
+                        )
+                    );
                 }
                 Unary(op) => {
-                    let x = stack.pop().unwrap();
-                    let r = match op {
-                        Plus => x,
-                        Minus => -x,
-                        Fact => {
-                            // Check to make sure x has no fractional component (can be converted to int without loss)
-                            match factorial(x) {
-                                Ok(res) => res,
-                                Err(e) => return Err(Error::EvalError(String::from(e))),
+                    let (x, unit) = stack.pop().unwrap();
+                    stack.push((
+                        match op {
+                            Plus => x,
+                            Minus => -x,
+                            Fact => {
+                                // Check to make sure x has no fractional component (can be converted to int without loss)
+                                match factorial(x) {
+                                    Ok(res) => res,
+                                    Err(_) => return Err(Error::EvalError(EvalError::FactorialError)),
+                                }
+                            }
+                            _ => {
+                                return Err(Error::EvalError(EvalError::UnimplementedUnaryOperation(op)));
+                            }
+                        },
+                        match op {
+                            Plus | Minus => unit,
+                            Fact => f64::NAN,
+                            _ => {
+                                return Err(Error::EvalError(EvalError::UnimplementedUnaryOperation(op)));
                             }
                         }
-                        _ => {
-                            return Err(Error::EvalError(format!(
-                                "Unimplemented unary operation: {:?}",
-                                op
-                            )));
-                        }
-                    };
-                    stack.push(r);
+                    ));
                 }
                 Func(ref n, Some(i)) => {
                     if stack.len() < i {
-                        return Err(Error::EvalError(format!(
-                            "eval: stack does not have enough arguments for function token \
-                             {:?}",
-                            token
-                        )));
+                        return Err(Error::EvalError(EvalError::NotEnoughArgumentsForFunction(n.to_owned(), i)));
                     }
-                    match ctx.eval_func(n, &stack[stack.len() - i..]) {
+                    match ctx.eval_func(n, &stack[stack.len() - i..].iter().map(|(x, _)| *x).collect::<Vec<f64>>()) {
                         Ok(r) => {
+                            let units: Vec<f64> = stack[stack.len() - i..].iter().map(|(_, u)| *u).collect();
                             let nl = stack.len() - i;
                             stack.truncate(nl);
-                            stack.push(r);
+                            stack.push((r, ctx.func_type(n, &units)));
                         }
                         Err(e) => return Err(Error::Function(n.to_owned(), e)),
                     }
                 }
-                _ => return Err(Error::EvalError(format!("Unrecognized token: {:?}", token))),
+                _ => return Err(Error::EvalError(EvalError::UnexpectedToken(token.clone()))),
             }
         }
 
         let r = stack.pop().expect("Stack is empty, this is impossible.");
         if !stack.is_empty() {
-            return Err(Error::EvalError(format!(
-                "There are still {} items on the stack.",
-                stack.len()
-            )));
+            return Err(Error::EvalError(EvalError::ExcessTokens(stack)));
         }
         Ok(r)
     }
@@ -506,10 +491,7 @@ impl Expr {
                     }
                 }
                 Token::Func(_, None) => {
-                    return Err(Error::EvalError(format!(
-                        "expr::check_context: Unexpected token: {:?}",
-                        *t
-                    )));
+                    return Err(Error::EvalError(EvalError::UnexpectedToken(t.clone())));
                 }
                 Token::LParen
                 | Token::RParen
@@ -621,6 +603,9 @@ impl Deref for Expr {
 pub trait ContextProvider {
     fn get_var(&self, _: &str) -> Option<f64> {
         None
+    }
+    fn func_type(&self, _: &str, _: &[f64]) -> f64 {
+        0f64
     }
     fn eval_func(&self, _: &str, _: &[f64]) -> Result<f64, FuncEvalError> {
         Err(FuncEvalError::UnknownFunction)
@@ -1014,6 +999,20 @@ impl<'a> ContextProvider for Context<'a> {
     fn get_var(&self, name: &str) -> Option<f64> {
         self.vars.get(name).cloned()
     }
+    fn func_type(&self, name: &str, args: &[f64]) -> f64 {
+        match name {
+            "abs" | "floor" | "ceil" |"round" => args[0],
+            "max" | "min" => {
+                for val in args {
+                    if *val == args[0] {
+                        return 0f64;
+                    }
+                }
+                args[0]
+            },
+            _ => 0f64,
+        }
+    }
     fn eval_func(&self, name: &str, args: &[f64]) -> Result<f64, FuncEvalError> {
         self.funcs
             .get(name)
@@ -1180,12 +1179,11 @@ mod tests {
 
     #[test]
     fn test_expressions_seconds_pow() {
-        assert_eq!(Expr::from_str("1".to_string().as_ref()).unwrap().get_type_seconds(), Ok(0));
-        assert_eq!(Expr::from_str("1:59:49".to_string().as_ref()).unwrap().get_type_seconds(), Ok(1));
-        assert_eq!(Expr::from_str("1:59:49/42.195".to_string().as_ref()).unwrap().get_type_seconds(), Ok(1));
-        assert_eq!(Expr::from_str("1:59:49/2:48".to_string().as_ref()).unwrap().get_type_seconds(), Ok(0));
-        assert_eq!(Expr::from_str("2 - floor(1:59:49*2:48)+12".to_string().as_ref()).unwrap().get_type_seconds(), Ok(2));
-        assert_eq!(Expr::from_str("2 - floor(1:59:49*2:48)*4^2+12".to_string().as_ref()).unwrap().get_type_seconds(), Ok(2));
+        assert_eq!(Expr::from_str("1".to_string().as_ref()).unwrap().eval_with_unit(), Ok((1f64, 0f64)));
+        assert_eq!(Expr::from_str("1:59:49".to_string().as_ref()).unwrap().eval_with_unit(), Ok((7189f64, 1f64)));
+        assert_eq!(Expr::from_str("2:06:35.1/42.195".to_string().as_ref()).unwrap().eval_with_unit(), Ok((180f64, 1f64)));
+        assert_eq!(Expr::from_str("2:06:35.1/42.195/3:00".to_string().as_ref()).unwrap().eval_with_unit(), Ok((1f64, 0f64)));
+        assert_eq!(Expr::from_str("floor(1:59:49 / 100) - 71".to_string().as_ref()).unwrap().eval_with_unit(), Ok((0f64, 1f64)));
     }
 
     #[test]

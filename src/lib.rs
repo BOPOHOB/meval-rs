@@ -220,7 +220,7 @@ pub enum Error {
     /// The shunting-yard algorithm returned an error.
     RPNError(RPNError),
     // A catch all for all other errors during evaluation
-    EvalError(String),
+    EvalError(EvalError),
 }
 
 impl fmt::Display for Error {
