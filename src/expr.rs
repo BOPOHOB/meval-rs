@@ -1184,6 +1184,8 @@ mod tests {
         assert_eq!(Expr::from_str("2:06:35.1/42.195".to_string().as_ref()).unwrap().eval_with_unit(), Ok((180f64, 1f64)));
         assert_eq!(Expr::from_str("2:06:35.1/42.195/3:00".to_string().as_ref()).unwrap().eval_with_unit(), Ok((1f64, 0f64)));
         assert_eq!(Expr::from_str("floor(1:59:49 / 100) - 71".to_string().as_ref()).unwrap().eval_with_unit(), Ok((0f64, 1f64)));
+        assert_eq!(Expr::from_str("floor(10000 * 2 / 1:17^2)".to_string().as_ref()).unwrap().eval_with_unit(), Ok((3f64, -2f64)));
+
     }
 
     #[test]
