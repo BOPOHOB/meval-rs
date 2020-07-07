@@ -1,3 +1,6 @@
+# 0.2.1
+- `:` operator and `eval_with_unit` function
+
 # 0.2
 
 - `bind` and `bind_with_context` functions return unboxed closures

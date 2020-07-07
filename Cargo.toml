@@ -1,14 +1,14 @@
 [package]
-authors = ["Norbert Pozar <bertapozar@gmail.com>"]
+authors = ["Norbert Pozar <bertapozar@gmail.com>", "Voronov Pavel <self@bopohob.ru>"]
 description = "A simple math expression parser and evaluator."
 documentation = "https://docs.rs/meval"
-homepage = "https://github.com/rekka/meval-rs"
-keywords = ["math", "parser", "expression", "formula", "evaluator"]
+homepage = "https://github.com/BOPOHOB/meval-rs"
+keywords = ["math", "parser", "expression", "formula", "evaluator", "time"]
 license = "Unlicense/MIT"
 name = "meval"
 readme = "README.md"
-repository = "https://github.com/rekka/meval-rs"
-version = "0.2.0"
+repository = "https://github.com/BOPOHOB/meval-rs"
+version = "0.2.1"
 exclude = ["README.tpl", ".travis.yml"]
 
 [dependencies]
