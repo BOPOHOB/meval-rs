@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/BOPOHOB/meval-rs.svg?branch=master)](https://travis-ci.org/rekka/meval-rs)
+[![Build Status](https://travis-ci.com/BOPOHOB/meval-rs.svg?branch=master)](https://travis-ci.org/BOPOHOB/meval-rs)
 
 # meval
 
