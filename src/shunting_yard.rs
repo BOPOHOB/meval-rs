@@ -11,6 +11,7 @@ use std::fmt;
 use tokenizer::Token;
 #[cfg(feature = "serde")]
 extern crate serde;
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy)]

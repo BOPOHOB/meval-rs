@@ -131,9 +131,10 @@
 #![cfg_attr(feature = "serde", doc = " ```rust")]
 #![cfg_attr(not(feature = "serde"), doc = " ```rust,ignore")]
 //! #[macro_use]
-//! extern crate serde_derive;
 //! extern crate toml;
 //! extern crate meval;
+//! extern crate serde;
+//! use serde::Deserialize;
 //! use meval::{Expr, Context};
 //!
 //! #[derive(Deserialize)]
@@ -188,6 +189,7 @@ extern crate nom;
 extern crate fnv;
 #[cfg(feature = "serde")]
 extern crate serde;
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 #[cfg(test)]
 extern crate serde_json;

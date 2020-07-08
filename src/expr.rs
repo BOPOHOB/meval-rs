@@ -5,6 +5,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 #[cfg(feature = "serde")]
 extern crate serde;
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 
 type ContextHashMap<K, V> = FnvHashMap<K, V>;
@@ -1028,7 +1029,6 @@ impl<'a> ContextProvider for Context<'a> {
 #[cfg(feature = "serde")]
 pub mod de {
     use super::Expr;
-    use serde;
     use std::fmt;
     use std::str::FromStr;
     use tokenizer::Token;
@@ -1109,7 +1109,8 @@ pub mod de {
 
         #[test]
         fn test_json_deserialization() {
-            #[derive(Deserialize)]
+            extern crate serde;
+            #[derive(serde::Deserialize)]
             struct Ode {
                 #[serde(deserialize_with = "as_f64")]
                 x0: f64,

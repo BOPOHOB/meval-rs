@@ -10,9 +10,10 @@ use serde::Deserialize;
 ///
 /// ```rust
 /// #[macro_use]
-/// extern crate serde_derive;
 /// extern crate toml;
 /// extern crate meval;
+/// extern crate serde;
+/// use serde::Deserialize;
 /// use meval::{Expr, Context};
 ///
 /// #[derive(Deserialize)]

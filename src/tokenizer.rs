@@ -11,6 +11,7 @@ use std::fmt;
 use std::str::from_utf8;
 #[cfg(feature = "serde")]
 extern crate serde;
+#[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 
 /// An error reported by the parser.
