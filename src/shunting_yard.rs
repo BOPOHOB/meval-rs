@@ -9,6 +9,9 @@
 use std;
 use std::fmt;
 use tokenizer::Token;
+#[cfg(feature = "serde")]
+extern crate serde;
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy)]
 enum Associativity {
@@ -19,6 +22,7 @@ enum Associativity {
 
 /// An error produced by the shunting-yard algorightm.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum RPNError {
     /// An extra left parenthesis was found.
     MismatchedLParen(usize),

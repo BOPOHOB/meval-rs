@@ -9,9 +9,13 @@ use nom::{multispace, slice_to_offsets, IResult, Needed};
 use std;
 use std::fmt;
 use std::str::from_utf8;
+#[cfg(feature = "serde")]
+extern crate serde;
+use serde::{Serialize, Deserialize};
 
 /// An error reported by the parser.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ParseError {
     /// A token that is not allowed at the given location (contains the location of the offending
     /// character in the source string).
@@ -42,6 +46,7 @@ impl std::error::Error for ParseError { }
 
 /// Mathematical operations.
 #[derive(Debug, PartialEq, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Operation {
     Plus,
     Minus,
@@ -55,6 +60,7 @@ pub enum Operation {
 
 /// Expression tokens.
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Token {
     /// Binary operation.
     Binary(Operation),

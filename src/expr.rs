@@ -3,6 +3,9 @@ use std::f64::consts;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::str::FromStr;
+#[cfg(feature = "serde")]
+extern crate serde;
+use serde::{Serialize, Deserialize};
 
 type ContextHashMap<K, V> = FnvHashMap<K, V>;
 
@@ -14,6 +17,7 @@ use tokenizer::{tokenize, Token, Operation};
 use Error;
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EvalError {
     UnimplementedBinaryOperation(Operation),
     UnimplementedUnaryOperation(Operation),
@@ -614,6 +618,7 @@ pub trait ContextProvider {
 
 /// Function evaluation error.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FuncEvalError {
     TooFewArguments,
     TooManyArguments,

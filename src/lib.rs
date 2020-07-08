@@ -188,9 +188,7 @@ extern crate nom;
 extern crate fnv;
 #[cfg(feature = "serde")]
 extern crate serde;
-#[cfg_attr(all(test, feature = "serde"), macro_use)]
-#[cfg(all(test, feature = "serde"))]
-extern crate serde_derive;
+use serde::{Serialize, Deserialize};
 #[cfg(test)]
 extern crate serde_json;
 #[cfg(test)]
@@ -212,6 +210,7 @@ pub use tokenizer::ParseError;
 
 /// An error produced during parsing or evaluation.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Error {
     UnknownVariable(String),
     Function(String, FuncEvalError),
